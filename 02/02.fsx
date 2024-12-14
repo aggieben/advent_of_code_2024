@@ -2,7 +2,7 @@ open System
 open System.IO
 
 // let args = fsi.CommandLineArgs |> Array.tail
-let inputFile = "02/02_test.txt"
+let inputFile = "02/02_input.txt"
 
 let input =
     File.ReadLines(inputFile)
@@ -76,37 +76,51 @@ let hasSafeLevels (report: int array) =
                         By clicking “Accept all cookies”, you agree Stack Exchange can store cookies on your device and disclose information in accordance with our  Cookie Policy.
 *)
 
-let mapDiffs (report: int array) =
-    ({| last = Option<int>.None; diffs = []|}, report)
-    ||> Array.fold (fun acc value ->
-                        match acc.last with
-                        | None -> {| acc with last = Some value |}
-                        | Some last ->
-                            let diff = value - last
-                            {| acc with last = Some value; diffs = diff :: acc.diffs |})
-    |> (fun acc -> acc.diffs)
+let hasSafeLevels2 (report: int list) =
+    printfn "%A" report
+    let rec loop (last:int) (direction:int option) (canEliminate:bool) =
+        function
+        | [] -> true
+        | value::rest ->
+            let diff = value - last
+            let absDiff = abs diff
+            if absDiff = 0
+            then
+                if canEliminate then loop last direction false rest// drop this value and continue
+                else false
+            else
+                let diffSafe = absDiff >= 1 && absDiff <= 3
+                if not diffSafe
+                then
+                    if canEliminate then loop last direction false rest // drop this value and continue
+                    else false
+                else
+                    let newDirection = if diff > 0 then 1 else -1
+                    match direction with
+                    | Some dir ->
+                        if dir <> newDirection
+                        then
+                            if canEliminate then loop last direction false rest // drop this value and continue
+                            else false
+                        else
+                            loop value (Some newDirection) canEliminate rest
+                    | None ->
+                        loop value (Some newDirection) canEliminate rest
 
-let areDiffsSafe (diffs: int list) =
-    printfn "%A" diffs
-    let rec loop neg pos unsafe diffs =
-        match diffs with
-        | [] ->
-            List.sort [neg; pos; unsafe]
-            |> function
-               | x::y::_ ->
-                   printfn "[%d %d %d] => [%d %d _]" neg pos unsafe x y
+    match report with
+    | [] -> true
+    | first::rest ->
+        loop first None true rest
+        |> (fun b -> printfn "%A" b; b)
 
-                   x + y <= 1
-               | _ -> false
-        | diff :: rest ->
-            match diff with
-            | x when (abs x) < 1 || (abs x) > 3 -> loop neg pos (unsafe + 1) rest
-            | x when x < 0 -> loop (neg + 1) pos unsafe rest
-            | x when x > 0 -> loop neg (pos + 1) unsafe rest
-            | _ -> failwith "Invalid diff" // just to silence the warning
-    loop 0 0 0 diffs
+input
+|> Seq.map List.ofSeq
+// this is a stupid hack for dealing with the case where the first value needs to be eliminated
+|> Seq.map (fun report -> if hasSafeLevels2 report then true else List.rev report |> hasSafeLevels2)
+|> Seq.sumBy (fun b -> if b then 1 else 0)
 
-let mappedDiffs = input |> Seq.map mapDiffs |> Seq.toArray
-let diffSafety = input |> Seq.map mapDiffs |> Seq.map areDiffsSafe |> Seq.toArray
-
-[-3; 0; -2; -2] |> areDiffsSafe
+(*
+probably the better way to handle this is to initialize the loop function with a
+None instead of the first value; hacking this to double the work to catch the
+first value is not a good computational tradeoff
+*)
