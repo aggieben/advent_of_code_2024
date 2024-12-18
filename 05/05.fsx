@@ -47,5 +47,21 @@ let validUpdates =
     updates
     |> List.filter updateIsValid
 
-validUpdates |> List.sumBy (fun update -> update[(update.Length - 1)/2])
+// validUpdates |> List.sumBy (fun update -> update[(update.Length - 1)/2])
+
+(* part two *)
+
+
+
+let reorderInvalidUpdate update =
+    let updateMap = update |> Array.mapi (fun i v -> (v, i)) |> Map.ofArray
+
+    let orderMap =
+        update
+        |> Array.fold (fun acc page ->
+
+
+
+
+let invalidUpdates = updates |> List.filter (not << updateIsValid)
 
